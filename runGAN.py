@@ -39,7 +39,7 @@ The Discriminator is the one I have described in the TNNLS paper:
 '''
 # Training settings
 parser = argparse.ArgumentParser(description="PyTorch InfantSeg")
-parser.add_argument("--gpuID",default='1',type=str, help="the GPU ID")
+parser.add_argument("--gpuID",default='2',type=str, help="the GPU ID")
 parser.add_argument("--isSemiSupervised", action="store_true", help="is the training semi-supervised?", default=False)
 parser.add_argument("--NDim", type=int, default=3, help="the dimension of the shape, 1D, 2D or 3D?")
 parser.add_argument("--in_channels", type=int, default=1, help="the input channels ?")
@@ -60,7 +60,7 @@ parser.add_argument("--isGeneDiceLoss", action="store_true", help="is Generalize
 parser.add_argument("--isSoftmaxLoss", action="store_true", help="is Softmax Loss used?", default=True)
 parser.add_argument("--isFocalLoss", action="store_true", help="is Focal Loss used?", default=False)
 parser.add_argument("--focal_gamma", type=float, default=2, help="hyper-parameter gammar for focal loss. Default=2")
-parser.add_argument("--lambda_WCE", type=float, default=0.1, help="loss coefficient for weighted softmax loss. Default=0.5")
+parser.add_argument("--lambda_WCE", type=float, default=1, help="loss coefficient for weighted softmax loss. Default=0.5")
 parser.add_argument("--isContourLoss", action="store_true", help="is Contour Loss used?", default=False)
 parser.add_argument("--isDeeplySupervised", action="store_true", help="is deeply supervised mechanism used?", default=True)
 parser.add_argument("--isHighResolution", action="store_true", help="is high resolution used?", default=False)
@@ -102,16 +102,16 @@ parser.add_argument("--momentum", default=0.9, type=float, help="Momentum, Defau
 parser.add_argument("--weight-decay", "--wd", default=1e-4, type=float, help="weight decay, Default: 1e-4")
 parser.add_argument("--pretrained", default="", type=str, help="path to pretrained model (default: none)")
 #parser.add_argument("--prefixModelName", default="/home/dongnie/Desktop/myPyTorch/pytorch-SRResNet23D/SegCha_3D_wce_wdice_viewExp_resEnhance_lrdcr_fullAd_0116_", type=str, help="prefix of the to-be-saved model name")
-parser.add_argument("--prefixModelName", default="/shenlab/lab_stor/dongnie/challengeData/modelFiles/SegCha_3D_geneDice_mce_lr2e3_lrdceLimit_viewExp_ResSeg_DS_SemGuided_0308_", type=str, help="prefix of the to-be-saved model name")
-parser.add_argument("--prefixPredictedFN", default="preSub45_cha_3D_geneDice_mce_lr2e3_lrdceLimit_viewExp_ResSeg_DS_SemGuided_0308_", type=str, help="prefix of the to-be-saved predicted filename")
+parser.add_argument("--prefixModelName", default="/shenlab/lab_stor/dnIE14/challengeData/modelFiles/SegCha_3D_geneDice_mce_lr2e3_lrdceLimit_viewExp_ResSeg_DS_SemGuided_0916_", type=str, help="prefix of the to-be-saved model name")
+parser.add_argument("--prefixPredictedFN", default="preSub45_cha_3D_geneDice_mce_lr2e3_lrdceLimit_viewExp_ResSeg_DS_SemGuided_0916_", type=str, help="prefix of the to-be-saved predicted filename")
 parser.add_argument("--isTestonAttentionRegion", action="store_true", help="Test on the attention region?", default=True)
 
 parser.add_argument("--test_input_file_name",default='Case45.nii.gz',type=str, help="the input file name for testing subject")
 parser.add_argument("--test_gt_file_name",default='Case45_segmentation.nii.gz',type=str, help="the ground-truth file name for testing subject")
-parser.add_argument("--path_test",default='/shenlab/lab_stor5/dongnie/challengeData/data',type=str, help="the path for the testing nii.gz files")
-parser.add_argument("--path_patients_h5",default='/shenlab/lab_stor5/dongnie/challengeData/pelvicSegRegContourBatchH5',type=str, help="the path for the training hdf5 files")
-parser.add_argument("--path_patients_h5_test",default='/shenlab/lab_stor5/dongnie/challengeData/pelvicSegRegContourH5Test',type=str, help="the path for the testing hdf5 files")
-parser.add_argument("--path_patients_unlabeled_h5",default='/shenlab/lab_stor5/dongnie/challengeData/pelvicSegUnlabeledH5',type=str, help="the path for the training unlabeled hdf5 files")
+parser.add_argument("--path_test",default='/shenlab/lab_stor5/dnIE14/challengeData/data',type=str, help="the path for the testing nii.gz files")
+parser.add_argument("--path_patients_h5",default='/shenlab/lab_stor5/dnIE14/challengeData/pelvicSegRegContourBatchH5',type=str, help="the path for the training hdf5 files")
+parser.add_argument("--path_patients_h5_test",default='/shenlab/lab_stor5/dnIE14/challengeData/pelvicSegRegContourH5Test',type=str, help="the path for the testing hdf5 files")
+parser.add_argument("--path_patients_unlabeled_h5",default='/shenlab/lab_stor5/dnIE14/challengeData/pelvicSegUnlabeledH5',type=str, help="the path for the training unlabeled hdf5 files")
 
 
 #parser.add_argument("--path_test",default='/home/dongnie/warehouse/pelvicSeg/prostateChallenge/data',type=str, help="the path for the testing nii.gz files")
@@ -120,9 +120,11 @@ parser.add_argument("--path_patients_unlabeled_h5",default='/shenlab/lab_stor5/d
 #parser.add_argument("--path_patients_h5_test",default='/home/dongnie/warehouse/pelvicSeg/prostateChallenge/pelvic3DSegRegContourH5Test',type=str, help="the path for the testing hdf5 files")
 
 
-global opt, model, running_loss, start, criterion_dice, criterion_CEND, data_generator_test, path_test
+global opt, model, running_loss, running_loss_CE, running_loss_dice, start, criterion_dice, criterion_CEND, data_generator_test, path_test
 opt = parser.parse_args()
 running_loss = 0
+running_loss_CE = 0
+running_loss_dice = 0
 def main():    
 
 ########################################configs####################################
@@ -456,7 +458,7 @@ def trainSupervisedNet():
                     lossG_G = lossG_G + lossG_G_main
                 lossG_G.backward(retain_graph=True) #compute gradients
             
-            if opt.isDiceLoss:
+            if opt.isDiceLoss or opt.isGeneDiceLoss:
     #             criterion_dice = myWeightedDiceLoss4Organs(organIDs=[0,1,2,3], organWeights=[1,4,8,6])
                 if opt.isSampleImportanceFromAd:
                     loss_dice_main = (1+adImportance) * criterion_dice(outputG,torch.squeeze(labels,dim=1))
@@ -566,8 +568,10 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
             lossG = lossG_D
     #print('loss for generator is %f'%lossG.data[0])
     #print statistics
-    global running_loss, start
+    global running_loss, start, running_loss_CE, running_loss_dice
     running_loss = running_loss + lossG.data[0]
+    running_loss_CE = running_loss_CE + lossG_G.data[0]
+    running_loss_dice = running_loss_dice + loss_dice.data[0]
 #         print 'running_loss is ',running_loss,' type: ',type(running_loss)
     
 #         print type(outputD_fake.cpu().data[0].numpy())
@@ -580,6 +584,8 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         #    print 'the outputD_fake for iter {}'.format(iter), ' is ',outputD_fake.cpu().data[0].numpy()[0]
 #             print 'running loss is ',running_loss
         print 'average running loss for generator between iter [%d, %d] is: %.3f'%(iter - 100 + 1,iter,running_loss/100)
+        print 'average running loss with CE for generator between iter [%d, %d] is: %.3f'%(iter - 100 + 1,iter,running_loss_CE/100)
+        print 'average running loss with dice for generator between iter [%d, %d] is: %.3f'%(iter - 100 + 1,iter,running_loss_dice/100)
         if opt.isAdLoss:
             print 'loss for discriminator at iter ',iter, ' is %f'%lossD.data[0]
         print 'total loss for generator at iter ',iter, ' is %f'%lossG.data[0]
@@ -604,6 +610,8 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         print 'cost time for iter [%d, %d] is %.2f'%(iter - 100 + 1,iter, time.time()-start)
         print '************************************************'
         running_loss = 0.0
+        running_loss_CE = 0.0
+        running_loss_dice = 0.0
        
         start = time.time()
     if iter%opt.saveModelEvery==0: #save the model
@@ -1061,6 +1069,7 @@ def trainSemiSupervisedNet():
                         loss_dice = loss_dice + (loss_dice_main + loss_dice_path1 + loss_dice_path2)
                     else:
                         loss_dice = loss_dice + loss_dice_main
+                        print 'loss dice is: ', loss_dice
             #             loss_dice = myDiceLoss4Organs(outputG,torch.squeeze(labels)) #succeed
             #             loss_dice.backward(retain_graph=True) #compute gradients for dice loss
                         loss_dice.backward(retain_graph=True) #compute gradients for dice loss
